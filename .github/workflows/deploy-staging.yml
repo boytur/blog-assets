@@ -52,7 +52,7 @@ jobs:
 
       - name: Deploy to Staging Server
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << "END"
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << `END`
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }}
           cd ${{ secrets.DOCKER_COMPOSE_PATH }}
           docker-compose up -d --build
@@ -68,7 +68,7 @@ jobs:
     steps:
       - name: Destroy Preview Environment
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << "END"
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << `END`
           cd ${{ secrets.DOCKER_COMPOSE_PATH }}
           docker-compose down
           END
