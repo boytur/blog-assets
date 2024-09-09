@@ -53,11 +53,10 @@ jobs:
       - name: Deploy to New Environment
         run: |
           echo "Deploying to new environment"
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.NEW_SSH_PRIVATE_KEY }} ${{ secrets.NEW_SERVER_USER }}@${{ secrets.NEW_SERVER_IP }} << 'EOF'
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }}
-          cd ${{ secrets.NEW_DOCKER_COMPOSE_PATH }}
-          docker-compose up -d --build
-          EOF
+          curl -u ${{ secrets.SERVER_USER }}:${{ secrets.SERVER_PASSWORD }} -X POST \
+            -F "image=${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }}" \
+            -F "path=${{ secrets.NEW_DOCKER_COMPOSE_PATH }}" \
+            https://${{ secrets.SERVER_IP }}/deploy
 
   destroy:
     runs-on: ubuntu-latest
@@ -70,7 +69,6 @@ jobs:
       - name: Destroy Preview Environment
         run: |
           echo "Destroying preview environment"
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.NEW_SSH_PRIVATE_KEY }} ${{ secrets.NEW_SERVER_USER }}@${{ secrets.NEW_SERVER_IP }} << 'EOF'
-          cd ${{ secrets.NEW_DOCKER_COMPOSE_PATH }}
-          docker-compose down
-          EOF
+          curl -u ${{ secrets.SERVER_USER }}:${{ secrets.SERVER_PASSWORD }} -X POST \
+            -F "path=${{ secrets.NEW_DOCKER_COMPOSE_PATH }}" \
+            https://${{ secrets.SERVER_IP }}/destroy
