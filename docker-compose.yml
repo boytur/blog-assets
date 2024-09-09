@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  app:
+    image: boytur/your-app:staging
+    restart: always
+    ports:
+      - "3201:8080"
+    environment:
+      NODE_ENV: "staging"
+
+volumes:
+  db_data:
