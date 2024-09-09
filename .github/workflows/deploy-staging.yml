@@ -1,0 +1,74 @@
+name: Pull Request Preview
+
+on:
+  pull_request:
+    branches: ["develop"]
+    types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Preview deployments controller
+        uses: cloudposse/github-action-preview-environment-controller@main
+        id: controller
+        with:
+          labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          open: ${{ github.event.pull_request.state == 'open' }}
+          env-label: |
+            preview: deploy
+            qa1: deploy/qa1
+            qa2: deploy/qa2
+
+    outputs:
+      labels_env: ${{ steps.controller.outputs.labels_env }}
+      deploy_envs: ${{ steps.controller.outputs.deploy_envs }}
+      destroy_envs: ${{ steps.controller.outputs.destroy_envs }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ needs.context.outputs.deploy_envs != '[]' }}
+    strategy:
+      matrix:
+        env: ${{ fromJson(needs.context.outputs.deploy_envs) }}
+    environment:
+      name: ${{ matrix.env }}
+    needs: [context]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }} .
+
+      - name: Log in to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Push Docker image to DockerHub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }}
+
+      - name: Deploy to Staging Server
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }}
+          cd ${{ secrets.DOCKER_COMPOSE_PATH }}
+          docker-compose up -d --build
+          EOF
+
+  destroy:
+    runs-on: ubuntu-latest
+    if: ${{ needs.context.outputs.destroy_envs != '[]' }}
+    strategy:
+      matrix:
+        env: ${{ fromJson(needs.context.outputs.destroy_envs) }}
+    needs: [context]
+    steps:
+      - name: Destroy Preview Environment
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
+          cd ${{ secrets.DOCKER_COMPOSE_PATH }}
+          docker-compose down
+          EOF
