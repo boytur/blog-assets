@@ -50,12 +50,12 @@ jobs:
       - name: Push Docker image to DockerHub
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }}
 
-      - name: Deploy to Staging Server
+      - name: Deploy to New Environment
         run: |
-          echo "Deploying to preview environment for PR"
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+          echo "Deploying to new environment"
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.NEW_SSH_PRIVATE_KEY }} ${{ secrets.NEW_SERVER_USER }}@${{ secrets.NEW_SERVER_IP }} << 'EOF'
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/your-app:${{ matrix.env }}
-          cd ${{ secrets.DOCKER_COMPOSE_PATH }}
+          cd ${{ secrets.NEW_DOCKER_COMPOSE_PATH }}
           docker-compose up -d --build
           EOF
 
@@ -70,7 +70,7 @@ jobs:
       - name: Destroy Preview Environment
         run: |
           echo "Destroying preview environment"
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-          cd ${{ secrets.DOCKER_COMPOSE_PATH }}
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.NEW_SSH_PRIVATE_KEY }} ${{ secrets.NEW_SERVER_USER }}@${{ secrets.NEW_SERVER_IP }} << 'EOF'
+          cd ${{ secrets.NEW_DOCKER_COMPOSE_PATH }}
           docker-compose down
           EOF
